@@ -49,9 +49,6 @@
 #'   vector of length \code{length(shrinkage)} with each of its values being
 #'   associated with a learning rate and an increase in the total number of
 #'   trees. Default is \eqn{1000}.
-#' @param n.iter GB number of iterations without improvement. A numeric scalar
-#'   specifying the maximum number of iterations without performance
-#'   improvement the algorithm runs before stopping. Default is \eqn{70}.
 #' @param n.minobsinnode GB minimum number of observations in the terminal
 #'   nodes. An integer-valued scalar specifying the minimum number of
 #'   observations that each terminal node of the trees must contain. Default is
@@ -68,35 +65,12 @@
 #'   \code{shrinkage} contains the learning rate, \code{n_trees} the number of
 #'   trees to be grown.
 #' @examples \dontrun{
-#' # create list of cross-validation folds
-#' cv_folds <- list(
-#'   `1` = survey_item[1:200, ],
-#'   `2` = survey_item[201:400, ],
-#'   `3` = survey_item[401:1500, ])
-#'
-#' # run gradient boosting classifier
-#' out <- run_gb(
-#'   y = "YES",
-#'   L1.x = c("L1x1", "L1x2"),
-#'   L2.x = c("L2.x1", "L2.x2"),
-#'   L2.unit = NULL,
-#'   L2.reg = "region",
-#'   loss.unit = "individuals",
-#'   loss.fun = "MSE",
-#'   interaction.depth = c(1, 2, 3),
-#'   shrinkage = c(0.04, 0.01),
-#'   n.trees.init = 50,
-#'   n.trees.increase = 50,
-#'   n.trees.max = 1000,
-#'   n.iter = 70,
-#'   n.minobsinnode = 5,
-#'   data = cv_folds,
-#'   verbose = TRUE)
+#' not yet
 #' }
 
 run_gb <- function(y, L1.x, L2.x, L2.eval.unit, L2.unit, L2.reg,
                    loss.unit, loss.fun, interaction.depth, shrinkage,
-                   n.trees.init, n.trees.increase, n.trees.max, n.iter,
+                   n.trees.init, n.trees.increase, n.trees.max,
                    cores = cores, n.minobsinnode, data, verbose) {
 
   # Create model formula
@@ -105,7 +79,7 @@ run_gb <- function(y, L1.x, L2.x, L2.eval.unit, L2.unit, L2.reg,
 
   # Prepare data
   data <- lapply(data, function(k) {
-    dplyr::select_at(k, c(y, L1.x, L2.x, L2.unit, L2.reg))
+    dplyr::select_at(k, c(y, L1.x, L2.x, L2.eval.unit, L2.reg))
   })
 
   # Number of trees
@@ -239,6 +213,7 @@ run_gb_mc <- function(y, L1.x, L2.eval.unit, L2.unit, L2.reg, form, gb_grid,
 
     # Loop over each fold
     k_errors <- lapply(seq_along(data), function(k) {
+
       # Split data in training and validation sets
       data_train <- dplyr::bind_rows(data[-k])
       data_valid <- dplyr::bind_rows(data[k])

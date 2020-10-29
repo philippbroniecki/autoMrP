@@ -176,9 +176,6 @@
 #'   vector of length \code{length(gb.shrinkage)} with each of its values being
 #'   associated with a learning rate and an increase in the total number of
 #'   trees. Default is \eqn{1000}.
-#' @param gb.n.iter GB number of iterations without improvement. A numeric
-#'   scalar specifying the maximum number of iterations without performance
-#'   improvement the algorithm runs before stopping. Default is \eqn{70}.
 #' @param gb.n.minobsinnode GB minimum number of observations in the terminal
 #'   nodes. An integer-valued scalar specifying the minimum number of
 #'   observations that each terminal node of the trees must contain. Default is
@@ -280,8 +277,7 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
                      gb.interaction.depth = c(1, 2, 3),
                      gb.shrinkage = c(0.04, 0.01, 0.008, 0.005, 0.001),
                      gb.n.trees.init = 50, gb.n.trees.increase = 50,
-                     gb.n.trees.max = 1000, gb.n.iter = 70,
-                     gb.n.minobsinnode = 5, svm.kernel = "radial",
+                     gb.n.trees.max = 1000, gb.n.minobsinnode = 5, svm.kernel = "radial",
                      svm.gamma = NULL, svm.cost = NULL,
                      ebma.n.draws = 100,
                      ebma.tol = c(0.01, 0.005, 0.001, 0.0005, 0.0001, 0.00005,
@@ -426,7 +422,6 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
     }
 
 # Create folds ------------------------------------------------------------
-
 
     if (is.null(folds)) {
       # EBMA hold-out fold
@@ -583,7 +578,6 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
                        n.trees.init = gb.n.trees.init,
                        n.trees.increase = gb.n.trees.increase,
                        n.trees.max = gb.n.trees.max,
-                       n.iter = gb.n.iter,
                        n.minobsinnode = gb.n.minobsinnode,
                        data = cv_folds,
                        cores = cores,
