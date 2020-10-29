@@ -316,14 +316,14 @@ error_checks <- function(y, L1.x, L2.x, L2.unit, L2.reg, L2.x.scale, pcs,
   }
 
   # Check if loss.unit is either "individuals" or "L2 units"
-  if (!loss.unit %in% c("individuals", "L2 units")) {
+  if (!all(loss.unit %in% c("individuals", "L2 units"))) {
     stop(paste("The argument 'loss.unit', specifying the level at which to",
                " evaluate prediction performance, must be either",
                " 'individuals' or 'L2 units'.", sep = ""))
   }
 
   # Check if loss.fun is either "MSE" or "MAE"
-  if (!loss.fun %in% c("MSE", "MAE", "cross-entropy")) {
+  if (!all(loss.fun %in% c("MSE", "MAE", "cross-entropy"))) {
     stop(paste("The argument 'loss.fun', specifying the loss function used",
                " to measure prediction performance, must be either",
                " 'MSE', 'MAE', or 'cross-entropy'.", sep = ""))
@@ -406,68 +406,24 @@ error_checks <- function(y, L1.x, L2.x, L2.unit, L2.reg, L2.x.scale, pcs,
         }
       }
 
-      # Check if lasso.lambda is a list
-      if (is.list(lasso.lambda)) {
-        # Check if lasso.lambda is a list of two numeric vectors of equal size
-        if (!(length(lasso.lambda) == 2 &
-              all(sapply(lasso.lambda, function(x) {is.numeric(x)})) &
-              length(unique(sapply(lasso.lambda, function(x) {length(x)}))) == 1)) {
-          stop(paste("If provided as a list, argument 'lasso.lambda' must be a",
-                     " list of two numeric vectors of equal size, with the",
-                     " first vector containing the step sizes by which the",
-                     " penalty parameter should increase and the second vector",
-                     " containing the upper thresholds of the intervals to",
-                     " which the step sizes apply.",
-                     sep = ""))
-        } else {
-          # Check if step sizes do not exceed upper thresholds of intervals to
-          # which they should be applied
-          if (any(lasso.lambda[[1]] > lasso.lambda[[2]])) {
-            stop(paste("If argument 'lasso.lambda' is specified as a list of",
-                       " two vectors, the value in the first vector indicating",
-                       " the step size cannot exceed the corresponding value",
-                       " in the second vector indicating the upper threshold",
-                       " of the interval to which the step size should apply.",
-                       sep = ""))
-          } else {
-            # Check if lasso.lambda contains only non-negative values
-            if (min(unlist(lasso.lambda)) < 0) {
-              stop(paste("The argument 'lasso.lambda' can only take",
-                         " non-negative values.", sep = ""))
-            }
+      # Check if is provided but not a numeric vector
+      if (!is.null(lasso.lambda)){
+        if (!is.numeric(lasso.lambda)){
+          stop("lasso.lambda must be 'NULL' or a non-negative numeric vector.")
+        } else{
+          # Check if lasso.lambda contains non-negative values
+          if (!all(lasso.lambda > 0)){
+            stop("lasso.lambda must not contain negative values")
           }
-        }
-      } else {
-        # Check if lasso.lambda is a numeric vector
-        if (is.numeric(lasso.lambda)) {
-          # Check if lasso.lambda contains only non-negative values
-          if (min(lasso.lambda) < 0) {
-            stop(paste("The argument 'lasso.lambda' can only take",
-                       " non-negative values.", sep = ""))
-          }
-        } else {
-          stop(paste("The argument 'lasso.lambda' must be either a numeric",
-                     " vector of non-negative values or a list of two numeric",
-                     " vectors of equal size, with the first vector containing",
-                     " the step sizes by which the penalty parameter should",
-                     " increase and the second vector containing the upper",
-                     " thresholds of the intervals to which the step sizes apply.",
-                     sep = ""))
         }
       }
 
       # Check if lasso.n.iter is NULL
-      if (is.null(lasso.n.iter)) {
-
-      }
-
-      # Check if lasso.n.iter is an integer-valued scalar
-      if (!(dplyr::near(lasso.n.iter, as.integer(lasso.n.iter)) &
-            length(lasso.n.iter) == 1)) {
-        stop(paste("The argument 'lasso.n.iter', specifying the number of folds to",
-                   " be used in cross-validation, must be an integer-valued",
-                   " scalar.",
-                   sep = ""))
+      if (!is.null(lasso.n.iter)) {
+        if (!(dplyr::near(lasso.n.iter, as.integer(lasso.n.iter)) &
+              length(lasso.n.iter) == 1)) {
+          stop("lasso.n.iter specifies the Lasso grid size. It must be a non-negative integer valued scalar.")
+        }
       }
     } else {
       # Check if lasso.L2.x is NULL

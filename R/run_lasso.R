@@ -45,12 +45,12 @@
 #' }
 
 run_lasso <- function(y, L1.x, L2.x, L2.unit, L2.reg,
-                      n.iter = NULL, loss.unit, loss.fun,
+                      n.iter, loss.unit, loss.fun,
                       lambda, data, verbose, cores) {
 
   # Lasso search grid
   if ( is.null(lambda) ){
-    lambda <- log_spaced(min = 0.1, max = 250, n = 100)
+    lambda <- log_spaced(min = 0.1, max = 250, n = n.iter)
   }
 
   # Context-level fixed effects
