@@ -413,7 +413,6 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
 
     # Random over-sampling
     if ( isTRUE(oversampling) ){
-
       survey <- survey %>%
         dplyr::group_by( .dots = L2.unit ) %>%
         tidyr::nest() %>%
@@ -422,7 +421,8 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
           os <- dplyr::slice_sample(.data = os, n = base::ceiling(base::nrow(os) /2), replace = TRUE)
         })) %>%
         tidyr::unnest(os) %>%
-        dplyr::select(-2)
+        dplyr::select(-2) %>%
+        dplyr::ungroup()
     }
 
 # Create folds ------------------------------------------------------------
@@ -682,6 +682,7 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
       L2.x = L2.x,
       L2.unit = L2.unit,
       L2.reg = L2.reg,
+      oversampling = oversampling,
       post.strat = ps_out,
       n.draws = ebma.n.draws,
       tol = ebma.tol,
