@@ -84,11 +84,9 @@ run_pca <- function(y, L1.x, L2.x, L2.unit, L2.reg,
 
     # Train all models in parallel
     m_errors <- run_best_subset_mc(
-      best.subset.classifier = best_subset_classifier,
       verbose = verbose,
       models = models,
       data = data,
-      loss.function = loss_function,
       loss.unit = loss.unit,
       loss.fun = loss.fun,
       y = y,
@@ -134,14 +132,20 @@ run_pca <- function(y, L1.x, L2.x, L2.unit, L2.reg,
                                    L2.unit = L2.unit)
       })
 
-      # Mean over all k folds
-      mean(unlist(k_errors))
+      # Mean over loss functions
+      k_errors <- dplyr::bind_rows(k_errors) %>%
+        dplyr::group_by(measure) %>%
+        dplyr::summarise(value = mean(value), .groups = "drop") %>%
+        dplyr::mutate(model = m)
     })
   }
 
+  # Extract best tuning parameters
+  grid_cells <- dplyr::bind_rows(m_errors)
+  best_params <- dplyr::slice(loss_score_ranking(score = grid_cells, loss.fun = loss.fun), 1)
+
   # Choose best-performing model
-  min.m <- which.min(m_errors)
-  out <- models[[min.m]]
+  out <- models[[ dplyr::pull(.data = best_params, var = model) ]]
 
   # Function output
   return(out)

@@ -92,6 +92,8 @@
 #' @param mrp MRP classifier. A logical argument indicating whether the standard
 #'   MRP classifier should be used for predicting outcome \code{y}. Default is
 #'   \code{FALSE}.
+#' @param oversampling Over sample to create balance on the dependent variable.
+#'   A logical argument. Default is \code{TRUE}.
 #' @param forward.select Forward selection classifier. A logical argument
 #'   indicating whether to use forward selection rather than best subset
 #'   selection. Default is \code{FALSE}. \emph{Note:} forward selection is
@@ -268,13 +270,14 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
                      cores = 1, k.folds = 5, cv.sampling = "L2 units",
                      loss.unit = "individuals", loss.fun = "MSE",
                      best.subset = TRUE, lasso = TRUE, pca = TRUE, gb = TRUE,
-                     svm = TRUE, mrp = FALSE, forward.select = FALSE,
+                     svm = TRUE, mrp = FALSE, oversampling = TRUE,
+                     forward.select = FALSE,
                      best.subset.L2.x = NULL, lasso.L2.x = NULL,
                      pca.L2.x = NULL, gb.L2.x = NULL, svm.L2.x = NULL,
                      mrp.L2.x = NULL, gb.L2.unit = FALSE, gb.L2.reg = FALSE,
                      svm.L2.unit = FALSE, svm.L2.reg = FALSE,
-                     lasso.lambda = 1 / exp(- seq(from = -1, to = 4.5, length = 100)),
-                     lasso.n.iter = 70, gb.interaction.depth = c(1, 2, 3),
+                     lasso.lambda = NULL, lasso.n.iter = 70,
+                     gb.interaction.depth = c(1, 2, 3),
                      gb.shrinkage = c(0.04, 0.01, 0.008, 0.005, 0.001),
                      gb.n.trees.init = 50, gb.n.trees.increase = 50,
                      gb.n.trees.max = 1000, gb.n.iter = 70,
@@ -285,7 +288,8 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
                                   0.00001), seed = NULL, verbose = FALSE,
                      uncertainty = FALSE, boot.iter = NULL) {
 
-  # ------------------------------- Error checks -------------------------------
+
+# Error checks ------------------------------------------------------------
 
   # Call to function doing the error checks
   error_checks(y = y,
@@ -325,17 +329,20 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
                boot.iter = boot.iter,
                seed = seed)
 
-  # ----------------------------------- Seed -----------------------------------
+
+# Seed --------------------------------------------------------------------
 
   # Check seed argument and set seed
   if (is.null(seed)) { seed <- 546213978 }
   set.seed(seed)
 
-  # ---------------------------- No Bootstrapping --------------------------------
+
+# No bootstrapping --------------------------------------------------------
 
   if (!uncertainty){
 
-    # ------------------------------- Prepare data -------------------------------
+
+# Prepare data ------------------------------------------------------------
 
     # Coerce individual-level variables and geographic variables to factors in
     # survey and census data
@@ -404,7 +411,22 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
     survey <- tibble::as_tibble(x = survey)
     census <- tibble::as_tibble(x = census)
 
-    # ------------------------------- Create folds -------------------------------
+    # Random over-sampling
+    if ( isTRUE(oversampling) ){
+
+      survey <- survey %>%
+        dplyr::group_by( .dots = L2.unit ) %>%
+        tidyr::nest() %>%
+        dplyr::mutate(os = purrr:::map(data, function( x ){
+          os <- dplyr::group_by(.data = x, !! rlang::sym(y) )
+          os <- dplyr::slice_sample(.data = os, n = base::ceiling(base::nrow(os) /2), replace = TRUE)
+        })) %>%
+        tidyr::unnest(os) %>%
+        dplyr::select(-2)
+    }
+
+# Create folds ------------------------------------------------------------
+
 
     if (is.null(folds)) {
       # EBMA hold-out fold
@@ -444,7 +466,8 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
         dplyr::group_split(.data[[folds]])
     }
 
-    # ---------------------- Optimal individual classifiers ----------------------
+
+# Optimal individual classifiers ------------------------------------------
 
     # Classifier 1: Best Subset
     if (isTRUE(best.subset)) {
@@ -550,6 +573,7 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
       gb_out <- run_gb(y = y,
                        L1.x = L1.x,
                        L2.x = gb.L2.x,
+                       L2.eval.unit = L2.unit,
                        L2.unit = gb.L2.unit,
                        L2.reg = gb.L2.reg,
                        loss.unit = loss.unit,
@@ -594,24 +618,27 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
 
       # Run classifier
       set.seed(seed)
-      svm_out <- run_svm(y = y,
-                         L1.x = L1.x,
-                         L2.x = svm.L2.x,
-                         L2.unit = svm.L2.unit,
-                         L2.reg = svm.L2.reg,
-                         kernel = svm.kernel,
-                         loss.fun = loss.fun,
-                         loss.unit = loss.unit,
-                         gamma = svm.gamma,
-                         cost = svm.cost,
-                         data = cv_folds,
-                         verbose = verbose,
-                         cores = cores)
+      svm_out <- run_svm(
+        y = y,
+        L1.x = L1.x,
+        L2.x = svm.L2.x,
+        L2.eval.unit = L2.unit,
+        L2.unit = svm.L2.unit,
+        L2.reg = svm.L2.reg,
+        kernel = svm.kernel,
+        loss.fun = loss.fun,
+        loss.unit = loss.unit,
+        gamma = svm.gamma,
+        cost = svm.cost,
+        data = cv_folds,
+        verbose = verbose,
+        cores = cores)
     } else {
       svm_out <- NULL
     }
 
-    # --------------------------- Post-stratification ----------------------------
+
+# Post-stratification -----------------------------------------------------
 
     message("Starting post-stratification")
 
@@ -643,7 +670,9 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
       verbose = verbose
     )
 
-    # ----------------------------------- EBMA -----------------------------------
+
+# EBMA --------------------------------------------------------------------
+
 
     set.seed(seed)
     ebma_out <- ebma(
@@ -658,14 +687,16 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
       tol = ebma.tol,
       best.subset.opt = best_subset_out,
       pca.opt = pca_out,
-      lasso.opt = lasso_out,
+      lasso.opt = dplyr::pull(.data = lasso_out, var = lambda),
       gb.opt = gb_out,
       svm.opt = svm_out,
       verbose = verbose,
       cores = cores
     )
 
-    # ------------------------- Bootstrapping wrapper ----------------------------
+
+
+# Boostrapping wrapper ----------------------------------------------------
 
   } else{
 
@@ -699,7 +730,8 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
       boot.iter = boot.iter, cores = cores)
   }
 
-  # ----------------------------- Function output ------------------------------
+
+# autoMrP function output -------------------------------------------------
 
   class(ebma_out) <- c("autoMrP", "list")
   class(ebma_out$ebma) <- c("autoMrP", "ensemble", class(ebma_out$ebma))

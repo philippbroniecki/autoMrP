@@ -323,10 +323,10 @@ error_checks <- function(y, L1.x, L2.x, L2.unit, L2.reg, L2.x.scale, pcs,
   }
 
   # Check if loss.fun is either "MSE" or "MAE"
-  if (!loss.fun %in% c("MSE", "MAE")) {
+  if (!loss.fun %in% c("MSE", "MAE", "cross-entropy")) {
     stop(paste("The argument 'loss.fun', specifying the loss function used",
                " to measure prediction performance, must be either",
-               " 'MSE' or 'MAE'.", sep = ""))
+               " 'MSE', 'MAE', or 'cross-entropy'.", sep = ""))
   }
 
   # Check if best.subset is logical
@@ -1006,7 +1006,7 @@ model_list_pca <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL) {
 #                           Prediction loss function                           #
 ################################################################################
 
-#' Estimates loss value
+#' Estimates loss value.
 #'
 #' \code{loss_function()} estimates the loss based on a loss function.
 #'
@@ -1028,40 +1028,201 @@ model_list_pca <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL) {
 
 loss_function <- function(pred, data.valid,
                           loss.unit = c("individuals", "L2 units"),
-                          loss.fun = c("MSE", "MAE"),
+                          loss.fun = c("MSE", "MAE", "cross-entropy"),
                           y, L2.unit) {
-  if (loss.unit == "individuals" & loss.fun == "MSE") {
-    out <- mean((data.valid[[y]] - pred)^2)
-  } else if (loss.unit == "individuals" & loss.fun == "MAE") {
-    out <- mean(abs(data.valid[[y]] - pred))
-  } else if (loss.unit == "L2 units" & loss.fun == "MSE") {
-    data.valid <- data.valid %>%
-      dplyr::mutate(pred = pred)
 
-    out <- data.valid %>%
-      dplyr::group_by_at(L2.unit) %>%
-      dplyr::summarise_at(.vars = c(y, "pred"), mean) %>%
-      dplyr::mutate(sqe = (.data[[y]] - pred)^2) %>%
-      dplyr::pull(sqe)
+  ## Loss functions
+  # MSE
+  mse <- mean_squared_error(
+    pred = pred, data.valid = data.valid,
+    y = y, L2.unit = L2.unit)
 
-    out <- mean(out)
-  } else {
-    data.valid <- data.valid %>%
-      dplyr::mutate(pred = pred)
+  # MAE
+  mae <- mean_absolute_error(
+    pred = pred, data.valid = data.valid,
+    y = y, L2.unit = L2.unit)
 
-    out <- data.valid %>%
-      dplyr::group_by_at(L2.unit) %>%
-      dplyr::summarise_at(.vars = c(y, "pred"), mean) %>%
-      dplyr::mutate(ae = abs(.data[[y]] - pred)) %>%
-      dplyr::pull(ae)
+  # binary cross-entropy
+  bce <- binary_cross_entropy(
+    pred = pred, data.valid = data.valid,
+    y = y, L2.unit = L2.unit)
 
-    out <- mean(out)
-  }
+  # Combine loss functions
+  score <- mse %>%
+    dplyr::bind_rows(mae) %>%
+    dplyr::bind_rows(bce)
+
+  # Filter score table by loss function and loss unit
+  score <- score %>%
+    dplyr::filter(measure %in% loss.fun) %>%
+    dplyr::filter(level %in% loss.unit) %>%
+    dplyr::group_by(measure) %>%
+    dplyr::summarise(value = mean(value), .groups = "drop" )
 
   # Function output
+  return(score)
+}
+
+
+###########################################################################
+# mean squared error/ brier score -----------------------------------------
+###########################################################################
+
+#' Estimates the mean squared prediction error.
+#'
+#' \code{mean_squared_error()} estimates the mean squared error for the desired
+#' loss unit.
+#' @inheritParams loss_function
+
+mean_squared_error <- function(pred, data.valid, y, L2.unit){
+
+  # outcome
+  out <- dplyr::tibble(
+    measure = rep("MSE", 2),
+    value = rep(NA, 2),
+    level = c( "individuals", "L2 units")
+  )
+
+  # mse values
+  values <- rep(NA, 2)
+
+  # loss unit = "individual"
+  values[1] <- mean((data.valid[[y]] - pred)^2)
+
+  # loss unit = "L2 units"
+  l2 <- data.valid %>%
+    dplyr::mutate(pred = pred) %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(sqe = (.data[[y]] - pred)^2 ) %>%
+    dplyr::ungroup() %>%
+    dplyr::group_by(.dots = list(L2.unit)) %>%
+    dplyr::summarise(mse = mean(sqe), .groups = "drop")
+
+  values[2] <- mean(dplyr::pull(.data = l2, var = mse))
+
+  out <- dplyr::mutate(out, value = values)
+
   return(out)
 }
 
+
+###########################################################################
+# mean absolute error -----------------------------------------------------
+###########################################################################
+
+#' Estimates the mean absolute prediction error.
+#'
+#' \code{mean_absolute_error()} estimates the mean absolute error for the
+#' desired loss unit.
+#' @inheritParams loss_function
+
+mean_absolute_error <- function(pred, data.valid, y, L2.unit){
+
+  # outcome
+  out <- dplyr::tibble(
+    measure = rep("MAE", 2),
+    value = rep(NA, 2),
+    level = c( "individuals", "L2 units"))
+
+  # mae values
+  values <- rep(NA, 2)
+
+  # loss unit = "individual"
+  values[1] <- mean(abs(data.valid[[y]] - pred))
+
+  # loss unit = "L2 units"
+  l2 <- data.valid %>%
+    dplyr::mutate(pred = pred) %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(ae = abs(.data[[y]] - pred)) %>%
+    dplyr::ungroup() %>%
+    dplyr::group_by(.dots = list(L2.unit)) %>%
+    dplyr::summarise(mae = mean(ae), .groups = "drop")
+
+  values[2] <- mean(dplyr::pull(.data = l2, var = mae))
+
+  out <- dplyr::mutate(out, value = values)
+
+  return(out = out)
+}
+
+
+###########################################################################
+# binary cross-entropy ----------------------------------------------------
+###########################################################################
+
+#' Estimates binary cross-entropy.
+#'
+#' \code{binary_cross_entropy()} estimates binary cross-entropy for the desired
+#' loss unit.
+#' @inheritParams loss_function
+
+binary_cross_entropy <- function(pred, data.valid,
+                                 loss.unit = c("individuals", "L2 units"),
+                                 y, L2.unit){
+
+  # outcome
+  out <- dplyr::tibble(
+    measure = rep("cross-entropy", 2),
+    value = rep(NA, 2),
+    level = c( "individuals", "L2 units")
+  )
+
+  # cross-entropy values
+  values <- rep(NA, 2)
+
+  # loss unit = "individual"
+  values[1] <- (mean( data.valid[[y]] * log(pred) + (1 - data.valid[[y]]) * log(1 - pred)))*-1
+
+  # loss unit = "L2 units"
+  l2 <- data.valid %>%
+    dplyr::mutate(pred = pred) %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(ce = .data[[y]] * log(pred) + (1 - .data[[y]]) * log(1 - pred) ) %>%
+    dplyr::ungroup() %>%
+    dplyr::group_by(.dots = list(L2.unit)) %>%
+    dplyr::summarise(bce = mean(ce), .groups = "drop")
+
+  values[2] <- mean(dplyr::pull(.data = l2, var = bce)) *-1
+
+  out <- dplyr::mutate(out, value = values)
+  return(out)
+}
+
+
+###########################################################################
+# Loss score ranking ------------------------------------------------------
+###########################################################################
+
+#' Ranks tuning parameters according to loss functions
+#'
+#' \code{loss_score_ranking()} ranks tuning parameters according to the scores
+#' received in multiple loss functions.
+#'
+#' @inheritParams loss_function
+#' @param score A data set containing loss function names, the loss function
+#'   values, and the tuning parameter values.
+
+loss_score_ranking <- function(score, loss.fun){
+
+  # tuning parameter names
+  params <- names(score)[!names(score) %in% c("measure", "value")]
+
+  ranking <- lapply(loss.fun, function(x){
+    score %>%
+      dplyr::filter(measure == x) %>%
+      dplyr::arrange(value) %>%
+      dplyr::mutate(rank = dplyr::row_number())
+  })
+
+  ranking <- dplyr::bind_rows(ranking) %>%
+    dplyr::group_by(.dots = params) %>%
+    dplyr::summarise(rank = sum(rank), .groups = "drop") %>%
+    dplyr::arrange(rank)
+
+  return(ranking)
+
+}
 
 ################################################################################
 #                   Suppress cat in external package                           #
