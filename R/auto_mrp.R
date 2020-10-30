@@ -265,8 +265,8 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
                      pcs = NULL, folds = NULL, bin.proportion = NULL,
                      bin.size = NULL, survey, census, ebma.size = 1/3,
                      cores = 1, k.folds = 5, cv.sampling = "L2 units",
-                     loss.unit = c("individuals", "L2 units"),
-                     loss.fun = c("MSE", "cross-entropy"),
+                     loss.unit = c("individuals"),
+                     loss.fun = c("MSE"),
                      best.subset = TRUE, lasso = TRUE, pca = TRUE, gb = TRUE,
                      svm = TRUE, mrp = FALSE, oversampling = FALSE,
                      forward.select = FALSE,
@@ -410,18 +410,17 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
 
     # Random over-sampling
     if ( isTRUE(oversampling) ){
-      phil <- survey %>%
-        dplyr::group_by( .dots = L2.unit ) %>%
-        tidyr::nest() %>%
-        dplyr::mutate(os = purrr:::map(data, function( x ){
-          os <- dplyr::group_by(.data = x, !! rlang::sym(y) )
-          os <- dplyr::slice_sample(.data = os, n = base::ceiling(base::nrow(os) /2), replace = TRUE)
-        })) %>%
-        tidyr::unnest(os) %>%
-        dplyr::select(-2) %>%
-        dplyr::ungroup()
-
-      phil <- survey %>%
+      # phil <- survey %>%
+      #   dplyr::group_by( .dots = L2.unit ) %>%
+      #   tidyr::nest() %>%
+      #   dplyr::mutate(os = purrr:::map(data, function( x ){
+      #     os <- dplyr::group_by(.data = x, !! rlang::sym(y) )
+      #     os <- dplyr::slice_sample(.data = os, n = base::ceiling(base::nrow(os) /2), replace = TRUE)
+      #   })) %>%
+      #   tidyr::unnest(os) %>%
+      #   dplyr::select(-2) %>%
+      #   dplyr::ungroup()
+      add_rows <- survey %>%
         dplyr::group_by( .dots = L2.unit ) %>%
         tidyr::nest() %>%
         dplyr::mutate(os = purrr:::map(data, function( x ){
@@ -433,8 +432,13 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
           n_needed <- ifelse(test = y_needed == 0, yes = y_1 - y_0, no = y_0 - y_1)
           os <- dplyr::filter(.data = os, !! rlang::sym(y) == y_needed )
           os <- dplyr::slice_sample(.data = os, replace = TRUE, n = n_needed)
-        }))
+        })) %>%
+        tidyr::unnest(os) %>%
+        dplyr::ungroup()
+      survey <- dplyr::bind_rows(survey, add_rows)
+
     }
+
 
 # Create folds ------------------------------------------------------------
 
