@@ -1593,7 +1593,7 @@ summary.autoMrP <- function(object, ci.lvl = 0.95, digits = 4, format = "simple"
           "Max"),
         format = format,
         digits = digits)
-      if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows"), sep = "")
+      if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows", "\n"), sep = "")
     } else{
       s_data <- dplyr::select(.data = s_data, method, median)
       n <- ifelse(n <= nrow(s_data), yes = n, no = nrow(s_data) )
@@ -1605,7 +1605,7 @@ summary.autoMrP <- function(object, ci.lvl = 0.95, digits = 4, format = "simple"
           "Weight"),
         format = format,
         digits = digits)
-      if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows"), sep = "")
+      if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows", "\n"), sep = "")
     }
   }
 
@@ -1642,7 +1642,7 @@ summary.autoMrP <- function(object, ci.lvl = 0.95, digits = 4, format = "simple"
           "Max"),
         format = format,
         digits = digits)
-      if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows"), sep = "")
+      if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows", "\n"), sep = "")
 
     } else{
       s_data <- dplyr::select(.data = s_data, one_of(L2.unit), median)
@@ -1653,7 +1653,7 @@ summary.autoMrP <- function(object, ci.lvl = 0.95, digits = 4, format = "simple"
         col.names = c(L2.unit, "Estimate"),
         format = format,
         digits = digits)
-      if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows"), sep = "")
+      if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows", "\n"), sep = "")
     }
   }
 
@@ -1679,7 +1679,7 @@ summary.autoMrP <- function(object, ci.lvl = 0.95, digits = 4, format = "simple"
                    col.names = names(s_data),
                    format = format,
                    digits = digits)
-      if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows"), sep = "")
+      if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows", "\n"), sep = "")
     } else{
 
       # summary statistics
@@ -1709,7 +1709,7 @@ summary.autoMrP <- function(object, ci.lvl = 0.95, digits = 4, format = "simple"
             "Max"),
           format = format,
           digits = digits)
-        if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows"), sep = "")
+        if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows", "\n"), sep = "")
       } else{
         s_data <- dplyr::select(.data = s_data, dplyr::one_of(L2.unit), "median")
         n <- ifelse(n <= nrow(s_data), yes = n, no = nrow(s_data) )
@@ -1719,7 +1719,7 @@ summary.autoMrP <- function(object, ci.lvl = 0.95, digits = 4, format = "simple"
           col.names = c(L2.unit, "Estimate"),
           format = format,
           digits = digits)
-        if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows"), sep = "")
+        if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows", "\n"), sep = "")
       }
     }
   }
@@ -1769,13 +1769,13 @@ summary.autoMrP <- function(object, ci.lvl = 0.95, digits = 4, format = "simple"
           col.names = c( L2.unit, "Min.", "Lower bound", "Median", "Upper bound", "Max"),
         format = format,
         digits = digits)
-        if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows"), sep = "")
+        if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows", "\n"), sep = "")
       } else{
         s_data <- dplyr::select(.data = s_data, dplyr::one_of(L2.unit), median)
         n <- ifelse(n <= nrow(s_data), yes = n, no = nrow(s_data) )
         cat( paste("\n", "# EBMA estimates:"), sep = "")
         output_table(object = s_data[1:n, ], col.names = c(L2.unit, "Median"), format = format, digits = digits)
-        if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows"), sep = "")
+        if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows", "\n"), sep = "")
       }
     } else{
 
@@ -1820,7 +1820,7 @@ summary.autoMrP <- function(object, ci.lvl = 0.95, digits = 4, format = "simple"
               "Max"),
             format = format,
             digits = digits)
-          if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows"), sep = "")
+          if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows", "\n"), sep = "")
         } else{
           n <- ifelse(n <= nrow(s_data), yes = n, no = nrow(s_data) )
           cat( paste("\n", "# estimates of: ", paste(names(object$classifiers)[-1], collapse = ", ")), sep = "")
@@ -1831,7 +1831,7 @@ summary.autoMrP <- function(object, ci.lvl = 0.95, digits = 4, format = "simple"
             col.names = names(s_data),
             format = format,
             digits = digits)
-          if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows"), sep = "")
+          if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows", "\n"), sep = "")
         }
       } else {
        # drop uncertainty columns
@@ -1840,7 +1840,7 @@ summary.autoMrP <- function(object, ci.lvl = 0.95, digits = 4, format = "simple"
           n <- ifelse(n <= nrow(s_data), yes = n, no = nrow(s_data) )
           cat( paste("\n", "# ", names(object$classifiers)[2]," estimates:"), sep = "")
           output_table(object = s_data[1:n, ], col.names = c(L2.unit, "Estimate"), format = format, digits = digits)
-          if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows"), sep = "")
+          if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows", "\n"), sep = "")
         } else{
           n <- ifelse(n <= nrow(s_data), yes = n, no = nrow(s_data) )
           s_data <- s_data %>%
@@ -1850,7 +1850,7 @@ summary.autoMrP <- function(object, ci.lvl = 0.95, digits = 4, format = "simple"
             col.names = names(s_data),
             format = format,
             digits = digits)
-          if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows"), sep = "")
+          if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows", "\n"), sep = "")
         }
       }
     }
