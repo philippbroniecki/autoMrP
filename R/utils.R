@@ -1173,25 +1173,32 @@ f1_score <- function(pred, data.valid, y, L2.unit){
 
   ## individual level
 
-  # confusion matrix
-  pval <- ifelse(test = pred > 0.5, yes = 1, no = 0)
-  out <- table(truth = dplyr::pull(.data = data.valid, var = y),
-               preds = pval)
-
   # true positives
-  tp <- tryCatch(expr = out["1" , "1"], silent = TRUE)
-  tp <- ifelse(test = class(tp) == "try-error", yes = 0, no = tp)
+  tp_ind <- data.valid %>%
+    dplyr::mutate(pval = ifelse(test = pred > 0.5, yes = 1, no = 0)) %>%
+    dplyr::select( !! rlang::sym(y), pval ) %>%
+    dplyr::filter(pval == 1 & !! rlang::sym(y) == 1) %>%
+    dplyr::summarise(tp = sum(pval)) %>%
+    dplyr::pull(var = tp)
 
   # false positives
-  fp <- tryCatch(expr = out["0", "1"], silent = TRUE)
-  fp <- ifelse(test = class(fp) == "try-error", yes = 0, no = fp)
+  fp_ind <- data.valid %>%
+    dplyr::mutate(pval = ifelse(test = pred > 0.5, yes = 1, no = 0)) %>%
+    dplyr::select( !! rlang::sym(y), pval ) %>%
+    dplyr::filter(pval == 1 & !! rlang::sym(y) == 0 ) %>%
+    dplyr::summarise(fp = sum(pval)) %>%
+    dplyr::pull(var = fp)
 
   # false negatives
-  fn <- tryCatch(expr = out["1", "0"], silent = TRUE)
-  fn <- ifelse(test = class(fn) == "try-error", yes = 0, no = fn)
+  fn_ind <- data.valid %>%
+    dplyr::mutate(pval = ifelse(test = pred > 0.5, yes = 1, no = 0)) %>%
+    dplyr::select( !! rlang::sym(y), pval ) %>%
+    dplyr::filter(pval == 0 & !! rlang::sym(y) == 1 ) %>%
+    dplyr::summarise(fn = sum(!! rlang::sym(y))) %>%
+    dplyr::pull(var = fn)
 
   # f1 score
-  f1 <- tp / (tp + 0.5 * (fp +fn) )
+  f1 <- tp_ind / (tp_ind + 0.5 * (fp_ind + fn_ind) )
 
   # state-level f1 score
   state_out <- data.valid %>%
@@ -1203,30 +1210,34 @@ f1_score <- function(pred, data.valid, y, L2.unit){
     dplyr::group_by( !! rlang::sym(L2.unit) ) %>%
     # nest data
     tidyr::nest() %>%
-    # new column with state-level confusion matrixes
-    dplyr::mutate(
-      cm = purrr::map(data, function(x){
-        cm <- table( dplyr::pull(.data = x, var = y),
-                     dplyr::pull(.data = x, var = pval))})) %>%
     # new column with state-level f1 values
     dplyr::mutate(
-      f1 = purrr::map(cm, function(x){
+      f1 = purrr::map(data, function(x){
         # true positives
-        tp <- try(expr = x["1", "1"], silent = TRUE)
-        tp <- ifelse(test = class(tp) == "try-error", yes = 0, no = tp)
+        tp <- x %>%
+          dplyr::select( !! rlang::sym(y), pval ) %>%
+          dplyr::filter(pval == 1 & !! rlang::sym(y) == 1) %>%
+          dplyr::summarise(tp = sum(pval)) %>%
+          dplyr::pull(var = tp)
         # false positives
-        fp <- try(expr = x["0", "1"], silent = TRUE)
-        fp <- ifelse(test = class(fp) == "try-error", yes = 0, no = fp)
+        fp <- x %>%
+          dplyr::select( !! rlang::sym(y), pval ) %>%
+          dplyr::filter(pval == 1 & !! rlang::sym(y) == 0 ) %>%
+          dplyr::summarise(fp = sum(pval)) %>%
+          dplyr::pull(var = fp)
         # false negatives
-        fn <- try(expr = x["1", "0"], silent = TRUE)
-        fn <- ifelse(test = class(fn) == "try-error", yes = 0, no = fn)
+        fn <- x %>%
+          dplyr::select( !! rlang::sym(y), pval ) %>%
+          dplyr::filter(pval == 0 & !! rlang::sym(y) == 1 ) %>%
+          dplyr::summarise(fn = sum(!! rlang::sym(y))) %>%
+          dplyr::pull(var = fn)
         # f1 score
-        f1 <- tp / (tp + 0.5 * (fp + fn)) })) %>%
+        f1 <- tp / (tp + 0.5 * (fp + fn) ) })) %>%
     # unnest f1 values
     tidyr::unnest(f1) %>%
     dplyr::select( !! rlang::sym(L2.unit), f1 ) %>%
     dplyr::ungroup() %>%
-    dplyr::summarise(f1 = mean(f1), .groups = "drop")
+    dplyr::summarise(f1 = mean(f1, na.rm = TRUE), .groups = "drop")
 
   # return
   out <- dplyr::tibble(
