@@ -265,7 +265,7 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
                      pcs = NULL, folds = NULL, bin.proportion = NULL,
                      bin.size = NULL, survey, census, ebma.size = 1/3,
                      cores = 1, k.folds = 5, cv.sampling = "L2 units",
-                     loss.unit = c("individuals", "L2 units"), loss.fun = "MSE",
+                     loss.unit = c("individuals", "L2 units"), loss.fun = "MAE",
                      best.subset = TRUE, lasso = TRUE, pca = TRUE, gb = TRUE,
                      svm = TRUE, mrp = FALSE, oversampling = FALSE,
                      forward.select = FALSE,
@@ -424,7 +424,8 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
         dplyr::group_by( .dots = L2.unit ) %>%
         tidyr::nest() %>%
         dplyr::mutate(os = purrr:::map(data, function( x ){
-          os <- dplyr::group_by(.data = x, !! rlang::sym(y) )
+          os <- dplyr::mutate(.data = x, n = dplyr::n())
+          os <- dplyr::group_by(.data = os, !! rlang::sym(y) )
         }))
     }
 
