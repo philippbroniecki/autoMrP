@@ -265,7 +265,7 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
                      pcs = NULL, folds = NULL, bin.proportion = NULL,
                      bin.size = NULL, survey, census, ebma.size = 1/3,
                      cores = 1, k.folds = 5, cv.sampling = "L2 units",
-                     loss.unit = c("individuals", "L2 units"), loss.fun = "cross-entropy",
+                     loss.unit = c("individuals", "L2 units"), loss.fun = "MSE",
                      best.subset = TRUE, lasso = TRUE, pca = TRUE, gb = TRUE,
                      svm = TRUE, mrp = FALSE, oversampling = FALSE,
                      forward.select = FALSE,
@@ -409,7 +409,7 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
 
     # Random over-sampling
     if ( isTRUE(oversampling) ){
-      survey <- survey %>%
+      phil <- survey %>%
         dplyr::group_by( .dots = L2.unit ) %>%
         tidyr::nest() %>%
         dplyr::mutate(os = purrr:::map(data, function( x ){
@@ -419,6 +419,13 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
         tidyr::unnest(os) %>%
         dplyr::select(-2) %>%
         dplyr::ungroup()
+
+      phil <- survey %>%
+        dplyr::group_by( .dots = L2.unit ) %>%
+        tidyr::nest() %>%
+        dplyr::mutate(os = purrr:::map(data, function( x ){
+          os <- dplyr::group_by(.data = x, !! rlang::sym(y) )
+        }))
     }
 
 # Create folds ------------------------------------------------------------
