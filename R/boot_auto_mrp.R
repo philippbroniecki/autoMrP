@@ -32,7 +32,16 @@ boot_auto_mrp <- function(y, L1.x, L2.x, mrp.L2.x, L2.unit, L2.reg,
                                .packages = "autoMrP") %dorng% {
 
     # Bootstrapped survey sample
-    boot_sample <- dplyr::slice_sample(.data = survey, n = base::nrow(survey), replace = TRUE)
+    #boot_sample <- dplyr::slice_sample(.data = survey, n = base::nrow(survey), replace = TRUE)
+
+    boot_sample <- survey %>%
+      dplyr::group_by( !! rlang::sym(L2.unit) ) %>%
+      tidyr::nest() %>%
+      dplyr::mutate(data = purrr::map(data, function(x){
+        data = dplyr::slice_sample(.data = x, n = nrow(x), replace = TRUE)
+      })) %>%
+      tidyr::unnest(data) %>%
+      dplyr::ungroup()
 
     # Estimate on 1 sample in autoMrP
     boot_mrp <- auto_MrP(

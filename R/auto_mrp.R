@@ -265,9 +265,9 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
                      pcs = NULL, folds = NULL, bin.proportion = NULL,
                      bin.size = NULL, survey, census, ebma.size = 1/3,
                      cores = 1, k.folds = 5, cv.sampling = "L2 units",
-                     loss.unit = "individuals", loss.fun = "MSE",
+                     loss.unit = c("individuals","L2 units"), loss.fun = "msfe",
                      best.subset = TRUE, lasso = TRUE, pca = TRUE, gb = TRUE,
-                     svm = TRUE, mrp = FALSE, oversampling = TRUE,
+                     svm = TRUE, mrp = FALSE, oversampling = FALSE,
                      forward.select = FALSE,
                      best.subset.L2.x = NULL, lasso.L2.x = NULL,
                      pca.L2.x = NULL, gb.L2.x = NULL, svm.L2.x = NULL,
@@ -424,6 +424,7 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
 # Create folds ------------------------------------------------------------
 
     if (is.null(folds)) {
+
       # EBMA hold-out fold
       ebma.size <- round(nrow(survey) * ebma.size, digits = 0)
 

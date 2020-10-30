@@ -1003,10 +1003,22 @@ loss_function <- function(pred, data.valid,
     pred = pred, data.valid = data.valid,
     y = y, L2.unit = L2.unit)
 
+  # f1 score
+  f1 <- f1_score(
+    pred = pred, data.valid = data.valid,
+    L2.unit = L2.unit, y = y)
+
+  # mean squared false error
+  msfe <- mean_squared_false_error(
+    pred = pred, data.valid = data.valid,
+    y = y, L2.unit = L2.unit)
+
   # Combine loss functions
   score <- mse %>%
     dplyr::bind_rows(mae) %>%
-    dplyr::bind_rows(bce)
+    dplyr::bind_rows(bce) %>%
+    dplyr::bind_rows(f1) %>%
+    dplyr::bind_rows(msfe)
 
   # Filter score table by loss function and loss unit
   score <- score %>%
@@ -1107,10 +1119,11 @@ mean_absolute_error <- function(pred, data.valid, y, L2.unit){
 # binary cross-entropy ----------------------------------------------------
 ###########################################################################
 
-#' Estimates binary cross-entropy.
+#' Estimates the inverse binary cross-entropy, i.e. 0 is the best score and 1
+#' the worst.
 #'
-#' \code{binary_cross_entropy()} estimates binary cross-entropy for the desired
-#' loss unit.
+#' \code{binary_cross_entropy()} estimates the inverse binary cross-entropy on
+#' the individual and state-level.
 #' @inheritParams loss_function
 
 binary_cross_entropy <- function(pred, data.valid,
@@ -1145,6 +1158,139 @@ binary_cross_entropy <- function(pred, data.valid,
   return(out)
 }
 
+
+###########################################################################
+# F1 score ----------------------------------------------------------------
+###########################################################################
+#' Estimates the inverse f1 score, i.e. 0 is the best score and 1 the worst.
+#'
+#' \code{f1_score()} estimates the inverse f1 scores on the individual and state
+#' levels.
+#' @inheritParams loss_function
+
+
+f1_score <- function(pred, data.valid, y, L2.unit){
+
+  ## individual level
+
+  # confusion matrix
+  pval <- ifelse(test = pred > 0.5, yes = 1, no = 0)
+  out <- table(truth = dplyr::pull(.data = data.valid, var = y),
+               preds = pval)
+
+  # true positives
+  tp <- tryCatch(expr = out["1" , "1"], silent = TRUE)
+  tp <- ifelse(test = class(tp) == "try-error", yes = 0, no = tp)
+
+  # false positives
+  fp <- tryCatch(expr = out["0", "1"], silent = TRUE)
+  fp <- ifelse(test = class(fp) == "try-error", yes = 0, no = fp)
+
+  # false negatives
+  fn <- tryCatch(expr = out["1", "0"], silent = TRUE)
+  fn <- ifelse(test = class(fn) == "try-error", yes = 0, no = fn)
+
+  # f1 score
+  f1 <- tp / (tp + 0.5 * (fp +fn) )
+
+  # state-level f1 score
+  state_out <- data.valid %>%
+    # predicted values
+    dplyr::mutate(pval = ifelse(test = pred > 0.5, yes = 1, no = 0)) %>%
+    # select L2.unit, y, and predicted values
+    dplyr::select( !! rlang::sym(L2.unit), !! rlang::sym(y), pval ) %>%
+    # group by L2.unit
+    dplyr::group_by( !! rlang::sym(L2.unit) ) %>%
+    # nest data
+    tidyr::nest() %>%
+    # new column with state-level confusion matrixes
+    dplyr::mutate(
+      cm = purrr::map(data, function(x){
+        cm <- table( dplyr::pull(.data = x, var = y),
+                     dplyr::pull(.data = x, var = pval))})) %>%
+    # new column with state-level f1 values
+    dplyr::mutate(
+      f1 = purrr::map(cm, function(x){
+        # true positives
+        tp <- try(expr = x["1", "1"], silent = TRUE)
+        tp <- ifelse(test = class(tp) == "try-error", yes = 0, no = tp)
+        # false positives
+        fp <- try(expr = x["0", "1"], silent = TRUE)
+        fp <- ifelse(test = class(fp) == "try-error", yes = 0, no = fp)
+        # false negatives
+        fn <- try(expr = x["1", "0"], silent = TRUE)
+        fn <- ifelse(test = class(fn) == "try-error", yes = 0, no = fn)
+        # f1 score
+        f1 <- tp / (tp + 0.5 * (fp + fn)) })) %>%
+    # unnest f1 values
+    tidyr::unnest(f1) %>%
+    dplyr::select( !! rlang::sym(L2.unit), f1 ) %>%
+    dplyr::ungroup() %>%
+    dplyr::summarise(f1 = mean(f1), .groups = "drop")
+
+  # return
+  out <- dplyr::tibble(
+    measure = c("f1", "f1"),
+    value = c(1 - f1, 1 - dplyr::pull(.data = state_out, var = f1)),
+    level = c("individuals", "L2 units"))
+
+  return(out)
+
+}
+
+
+###########################################################################
+# Mean squared false error-------------------------------------------------
+###########################################################################
+#' Estimates the mean squared false error.
+#'
+#' \code{msfe()} estimates the inverse f1 scores on the individual and state
+#' levels.
+#' @inheritParams loss_function
+
+
+mean_squared_false_error <- function(pred, data.valid, y, L2.unit){
+
+  ## individual level
+  msfe_l1 <- data.valid %>%
+    dplyr::mutate(pval = ifelse(test = pred > 0.5, yes = 1, no = 0)) %>%
+    dplyr::select( !! rlang::sym(y), pval ) %>%
+    dplyr::group_by( !! rlang::sym(y) ) %>%
+    dplyr::mutate(err = (!! rlang::sym(y) - pval) ) %>%
+    dplyr::summarise(err_rates = mean(err), .groups = "drop") %>%
+    dplyr::mutate(err_rates = err_rates^2) %>%
+    dplyr::summarise( msfe = sum(err_rates)) %>%
+    dplyr::pull(var = msfe)
+
+  ## group level
+  msfe_l2 <- data.valid %>%
+    dplyr::mutate(pval = ifelse(test = pred > 0.5, yes = 1, no = 0)) %>%
+    dplyr::select( !! rlang::sym(L2.unit), !! rlang::sym(y), pval ) %>%
+    dplyr::group_by( !! rlang::sym(L2.unit) ) %>%
+    tidyr::nest() %>%
+    dplyr::mutate(msfe = purrr::map(data, function(x){
+      msfe <- x %>%
+        dplyr::group_by( !! rlang::sym(y) ) %>%
+        dplyr::mutate(err = (!! rlang::sym(y) - pval) ) %>%
+        dplyr::summarise(err_rates = mean(err), .groups = "drop") %>%
+        dplyr::mutate(err_rates = err_rates^2) %>%
+        dplyr::summarise( msfe = sum(err_rates)) %>%
+        dplyr::pull(var = msfe)
+    })) %>%
+    tidyr::unnest(msfe) %>%
+    dplyr::ungroup() %>%
+    dplyr::summarise(msfe = mean(msfe), .groups = "drop") %>%
+    dplyr::pull(var = msfe)
+
+  # return
+  out <- dplyr::tibble(
+    measure = c("msfe", "msfe"),
+    value = c(msfe_l1, msfe_l2),
+    level = c("individuals", "L2 units"))
+
+  return(out)
+
+}
 
 ###########################################################################
 # Loss score ranking ------------------------------------------------------
