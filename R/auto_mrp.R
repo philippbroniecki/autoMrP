@@ -265,7 +265,8 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
                      pcs = NULL, folds = NULL, bin.proportion = NULL,
                      bin.size = NULL, survey, census, ebma.size = 1/3,
                      cores = 1, k.folds = 5, cv.sampling = "L2 units",
-                     loss.unit = "individuals", loss.fun = "MAE",
+                     loss.unit = c("individuals", "L2 units"),
+                     loss.fun = c("MSE", "cross-entropy"),
                      best.subset = TRUE, lasso = TRUE, pca = TRUE, gb = TRUE,
                      svm = TRUE, mrp = FALSE, oversampling = FALSE,
                      forward.select = FALSE,
@@ -427,8 +428,11 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
           n <- nrow(x)
           os <- dplyr::group_by(.data = x, !! rlang::sym(y) )
           y_1 <- sum(dplyr::pull(.data = os, var = !! rlang::sym(y)))
-          y_0 <- n - y1
+          y_0 <- n - y_1
           y_needed <- ifelse(test = y_1 > y_0, yes = 0, no = 1)
+          n_needed <- ifelse(test = y_needed == 0, yes = y_1 - y_0, no = y_0 - y_1)
+          os <- dplyr::filter(.data = os, !! rlang::sym(y) == y_needed )
+          os <- dplyr::slice_sample(.data = os, replace = TRUE, n = n_needed)
         }))
     }
 
