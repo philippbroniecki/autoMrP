@@ -428,15 +428,17 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE,
           os <- dplyr::group_by(.data = x, !! rlang::sym(y) )
           y_1 <- sum(dplyr::pull(.data = os, var = !! rlang::sym(y)))
           y_0 <- n - y_1
-          y_needed <- ifelse(test = y_1 > y_0, yes = 0, no = 1)
-          n_needed <- ifelse(test = y_needed == 0, yes = y_1 - y_0, no = y_0 - y_1)
-          os <- dplyr::filter(.data = os, !! rlang::sym(y) == y_needed )
-          os <- dplyr::slice_sample(.data = os, replace = TRUE, n = n_needed)
+          if (y_1 > 0 & y_0 > 0){
+            y_needed <- ifelse(test = y_1 > y_0, yes = 0, no = 1)
+            n_needed <- ifelse(test = y_needed == 0, yes = y_1 - y_0, no = y_0 - y_1)
+            os <- dplyr::filter(.data = os, !! rlang::sym(y) == y_needed )
+            os <- dplyr::slice_sample(.data = os, replace = TRUE, n = n_needed)
+          }
+          return(os)
         })) %>%
         tidyr::unnest(os) %>%
         dplyr::ungroup()
       survey <- dplyr::bind_rows(survey, add_rows)
-
     }
 
 
