@@ -323,10 +323,10 @@ error_checks <- function(y, L1.x, L2.x, L2.unit, L2.reg, L2.x.scale, pcs,
   }
 
   # Check if loss.fun is either "MSE" or "MAE"
-  if (!all(loss.fun %in% c("MSE", "MAE", "cross-entropy"))) {
+  if (!all(loss.fun %in% c("MSE", "MAE", "cross-entropy", "f1", "msfe"))) {
     stop(paste("The argument 'loss.fun', specifying the loss function used",
                " to measure prediction performance, must be either",
-               " 'MSE', 'MAE', or 'cross-entropy'.", sep = ""))
+               " 'MSE', 'MAE', 'cross-entropy', 'f1', or 'msfe'.", sep = ""))
   }
 
   # Check if best.subset is logical
