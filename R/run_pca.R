@@ -69,27 +69,16 @@
 #' }
 
 run_pca <- function(y, L1.x, L2.x, L2.unit, L2.reg,
-                    loss.unit, loss.fun, models,
-                    data, cores, verbose) {
+                    loss.unit, loss.fun, data, cores,
+                    verbose) {
 
-
-  if (is.null(models)){
     # List of all models to be evaluated
     models <- model_list(y = y,
                          L1.x = L1.x,
                          L2.x = L2.x,
                          L2.unit = L2.unit,
                          L2.reg = L2.reg)
-  } else{
-    models <- dplyr::pull(.data = models, var = pca)
-  }
 
-  # no random effects terms specified
-  if (length(labels(terms(models[[1]]))) == 0){
-    warning("Glmer() did not converge with any of the random effects specifications: PCA skipped.")
-    return(NULL)
-    # run pca
-  } else{
     # prallel tuning if cores > 1
     if( cores > 1 ){
 
@@ -161,5 +150,4 @@ run_pca <- function(y, L1.x, L2.x, L2.unit, L2.reg,
     # Function output
     return(out)
 
-  }
 }

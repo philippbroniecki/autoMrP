@@ -274,7 +274,7 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE, p
                      lasso.lambda = NULL, lasso.n.iter = 100, gb.interaction.depth = c(1, 2, 3),
                      gb.shrinkage = c(0.04, 0.01, 0.008, 0.005, 0.001),
                      gb.n.trees.init = 50, gb.n.trees.increase = 50, gb.n.trees.max = 1000,
-                     gb.n.minobsinnode = 5, svm.kernel = "radial", svm.gamma = NULL, svm.cost = NULL,
+                     gb.n.minobsinnode = 20, svm.kernel = "radial", svm.gamma = NULL, svm.cost = NULL,
                      ebma.n.draws = 100, ebma.tol = c(0.01, 0.005, 0.001, 0.0005, 0.0001, 0.00005, 0.00001),
                      ranef.test = TRUE, seed = NULL, verbose = FALSE, uncertainty = FALSE, boot.iter = NULL) {
 
@@ -467,35 +467,6 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE, p
     }
 
 
-# Random effects convergence test -----------------------------------------
-
-    # Lme4 random effects models without fixed effects
-    if (isTRUE(ranef.test)) {
-
-      message("Lme4 convergence tests of random effects specification")
-
-      # principal component names
-      if (isFALSE(pca)){
-        pc_names <- NULL
-      }
-
-      # Run test
-      models <- run_ranef_test(
-        y = y,
-        L1.x = L1.x,
-        L2.x = L2.x,
-        pc_names = pc_names,
-        L2.unit = L2.unit,
-        L2.reg = L2.reg,
-        loss.unit = loss.unit,
-        loss.fun = loss.fun,
-        data = cv_folds,
-        verbose = verbose,
-        cores = cores)
-    } else {
-      models <- NULL
-    }
-
 # Optimal individual classifiers ------------------------------------------
 
 
@@ -520,7 +491,6 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE, p
                                          loss.unit = loss.unit,
                                          loss.fun = loss.fun,
                                          data = cv_folds,
-                                         models = models,
                                          verbose = verbose,
                                          cores = cores)
     } else {
@@ -569,16 +539,9 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE, p
         L2.reg = L2.reg,
         loss.unit = loss.unit,
         loss.fun = loss.fun,
-        models = models,
         data = cv_folds,
         verbose = verbose,
         cores = cores)
-
-      # remove if PCA out is identical to best_subset out
-      if (!is.null(pca_out) & isTRUE(best.subset)) {
-        if (pca_out == best_subset_out) pca_out <- NULL
-        warning("PCA removed. The empty model is the best solution for best subset and PCA. Consider turning the best subset classifier off.")
-      }
 
     } else {
       pca_out <- NULL
