@@ -575,7 +575,7 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE, p
         cores = cores)
 
       # remove if PCA out is identical to best_subset out
-      if (isTRUE(best.subset)) {
+      if (!is.null(pca_out) & isTRUE(best.subset)) {
         if (pca_out == best_subset_out) pca_out <- NULL
         warning("PCA removed. The empty model is the best solution for best subset and PCA. Consider turning the best subset classifier off.")
       }

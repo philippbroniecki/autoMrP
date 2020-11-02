@@ -1975,12 +1975,18 @@ run_ranef_test <- function(y, L1.x, L2.x, pc_names, L2.unit, L2.reg, loss.unit,
   # models without convergence errors
   re <- ranef_models %>%
     dplyr::mutate(singular = unlist(m_errors)) %>%
-    dplyr::filter(singular == FALSE) %>%
-    dplyr::mutate(vars = unlist(lapply(model, function(x){
-      length(labels(terms(x))) }))) %>%
-    dplyr::filter(vars == max(vars)) %>%
-    dplyr::filter(region == max(region)) %>%
-    dplyr::pull(var = model)
+    dplyr::filter(singular == FALSE)
+
+  if ( nrow(re) > 0){
+    re <- re %>%
+      dplyr::mutate(vars = unlist(lapply(model, function(x){
+        length(labels(terms(x))) }))) %>%
+      dplyr::filter(vars == max(vars)) %>%
+      dplyr::filter(region == max(region)) %>%
+      dplyr::pull(var = model)
+  } else{
+    re <- list(formula(paste(y, " ~ 1")))
+  }
 
   # add fixed effects
   ranef_list <- lapply(seq_along(L2.x), function(x) {combn(L2.x, x)})
@@ -2013,8 +2019,6 @@ run_ranef_test <- function(y, L1.x, L2.x, pc_names, L2.unit, L2.reg, loss.unit,
   } else{
     pc_models <- NA
   }
-
-
 
   # Combine with empty model
   out <- dplyr::tibble(
