@@ -56,15 +56,19 @@
 #' }
 
 run_best_subset <- function(y, L1.x, L2.x, L2.unit, L2.reg,
-                            loss.unit, loss.fun,
+                            loss.unit, loss.fun, models,
                             data, verbose, cores) {
 
-  # List of all models to be evaluated
-  models <- model_list(y = y,
-                       L1.x = L1.x,
-                       L2.x = L2.x,
-                       L2.unit = L2.unit,
-                       L2.reg = L2.reg)
+  if (is.null(models)){
+    # List of all models to be evaluated
+    models <- model_list(y = y,
+                         L1.x = L1.x,
+                         L2.x = L2.x,
+                         L2.unit = L2.unit,
+                         L2.reg = L2.reg)
+  } else{
+    models <- dplyr::pull(.data = models, var = best_subset)
+  }
 
   # prallel tuning if cores > 1
   if( cores > 1 ){
