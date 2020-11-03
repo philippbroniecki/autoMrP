@@ -265,7 +265,7 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE, p
                      folds = NULL, bin.proportion = NULL, bin.size = NULL, survey, census,
                      ebma.size = 1/3, cores = 1, k.folds = 5, cv.sampling = "L2 units",
                      loss.unit = c("individuals", "L2 units"),
-                     loss.fun = c("msfe", "cross-entropy", "f1", "MSE"),
+                     loss.fun = c("msfe", "cross-entropy"), # "f1", "MSE"),
                      best.subset = TRUE, lasso = TRUE, pca = TRUE, gb = TRUE, svm = TRUE,
                      mrp = FALSE, oversampling = FALSE, forward.select = FALSE,
                      best.subset.L2.x = NULL, lasso.L2.x = NULL, pca.L2.x = NULL,
