@@ -1780,7 +1780,8 @@ summary.autoMrP <- function(object, ci.lvl = 0.95, digits = 4, format = "simple"
     } else{
 
       # Summarize all classifiers or classifier specified in classifiers argument
-      if( is.null(classifiers)) {
+      # or MrP model
+      if( is.null(classifiers) ) {
         s_data <- object$classifiers
       } else{
         s_data <- object$classifiers %>%
@@ -1803,36 +1804,39 @@ summary.autoMrP <- function(object, ci.lvl = 0.95, digits = 4, format = "simple"
         dplyr::select(one_of(grep(pattern = "median", x = names(s_data), value = "TRUE")[1],
                              grep(pattern = "lb", x = names(s_data), value = "TRUE")[1]))
 
-      if( all(comparison[,1] == comparison[,2]) ){
-
         # summarize one classifier
-        if (sum(grepl(pattern = "best_subset|pca|lasso|gb|svm|mrp", x = names(s_data))) < 4){
-          n <- ifelse(n <= nrow(s_data), yes = n, no = nrow(s_data) )
-          cat( paste("\n", "# ", names(object$classifiers)[2]," estimates:"), sep = "")
-          output_table(
-            object = s_data[1:n, ],
-            col.names = c(
-              L2.unit,
-              "Min.",
-              "Lower bound",
-              "Median",
-              "Upper bound",
-              "Max"),
-            format = format,
-            digits = digits)
-          if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows", "\n", "\n"), sep = "")
-        } else{
-          n <- ifelse(n <= nrow(s_data), yes = n, no = nrow(s_data) )
-          cat( paste("\n", "# estimates of: ", paste(names(object$classifiers)[-1], collapse = ", ")), sep = "")
-          s_data <- s_data %>%
-            dplyr::select(one_of( L2.unit), contains("median"))
-          output_table(
-            object = s_data[1:n, ],
-            col.names = names(s_data),
-            format = format,
-            digits = digits)
-          if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows", "\n", "\n"), sep = "")
-        }
+        if ( sum(grepl(pattern = "best_subset|pca|lasso|gb|svm|mrp", x = names(s_data))) < 4 ){
+
+          # without uncertainty
+          if( all(comparison[,1] != comparison[,2]) ){
+
+            n <- ifelse(n <= nrow(s_data), yes = n, no = nrow(s_data) )
+            cat( paste("\n", "# ", names(object$classifiers)[2]," estimates:"), sep = "")
+            output_table(
+              object = s_data[1:n, ],
+              col.names = c(
+                L2.unit,
+                "Min.",
+                "Lower bound",
+                "Median",
+                "Upper bound",
+                "Max"),
+              format = format,
+              digits = digits)
+            if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows", "\n", "\n"), sep = "")
+          } else{
+            n <- ifelse(n <= nrow(s_data), yes = n, no = nrow(s_data) )
+            cat( paste("\n", "# estimates of: ", paste(names(object$classifiers)[-1], collapse = ", ")), sep = "")
+            s_data <- s_data %>%
+              dplyr::select(one_of( L2.unit), contains("median"))
+            output_table(
+              object = s_data[1:n, ],
+              col.names = names(s_data),
+              format = format,
+              digits = digits)
+            if (n < nrow(s_data)) cat( paste("... with", nrow(s_data)-n, " more rows", "\n", "\n"), sep = "")
+          }
+
       } else {
        # drop uncertainty columns
         if ( ncol(s_data) < 5 ){
