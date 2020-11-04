@@ -283,10 +283,18 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE, p
                      gb.n.trees.increase = 50,
                      #gb.n.trees.max = 1000,
                      gb.n.trees.max = 2000,
-                     gb.n.minobsinnode = 20, svm.kernel = "radial", svm.gamma = NULL, svm.cost = NULL,
+                     gb.n.minobsinnode = 20,
+                     svm.kernel = c("radial", "polynomial"),
+                     svm.gamma = NULL,
+                     svm.cost = NULL,
                      svm.degree = NULL,
-                     ebma.n.draws = 100, ebma.tol = c(0.01, 0.005, 0.001, 0.0005, 0.0001, 0.00005, 0.00001),
-                     ranef.test = TRUE, seed = NULL, verbose = FALSE, uncertainty = FALSE, boot.iter = NULL) {
+                     ebma.n.draws = 100,
+                     ebma.tol = c(0.01, 0.005, 0.001, 0.0005, 0.0001, 0.00005, 0.00001),
+                     ranef.test = TRUE,
+                     seed = NULL,
+                     verbose = FALSE,
+                     uncertainty = FALSE,
+                     boot.iter = NULL) {
 
 
 # Error checks ------------------------------------------------------------
