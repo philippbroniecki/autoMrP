@@ -74,7 +74,7 @@
 
 run_svm <- function(y, L1.x, L2.x, L2.eval.unit, L2.unit, L2.reg,
                     kernel = "radial", loss.fun, loss.unit, gamma,
-                    cost, data, verbose, cores) {
+                    cost, degree, data, verbose, cores) {
 
   # Create model formula
   x <- paste(c(L1.x, L2.x, L2.unit, L2.reg), collapse = " + ")
@@ -82,7 +82,6 @@ run_svm <- function(y, L1.x, L2.x, L2.eval.unit, L2.unit, L2.reg,
 
   # Default Gamma values
   if( is.null(gamma) ){
-
     # SVM Gamma values
     gamma <- log_spaced(min = 1e-5, 1e-1, n = 20)
   }
@@ -92,15 +91,27 @@ run_svm <- function(y, L1.x, L2.x, L2.eval.unit, L2.unit, L2.reg,
     cost <- log_spaced(min = 0.5, max = 10, n = 5)
   }
 
-  # tuning parameter grid
-  svm_grid <- expand.grid(gamma, cost)
-  names(svm_grid) <- c("gamma", "cost")
+  # Default degree values
+  if ( is.null(degree) ){
+    if ( "polynomial" %in% kernel ){
+      degree <- c(2, 3, 4)
+      # tuning parameter grid
+      svm_grid <- expand.grid(gamma, cost, kernel, degree)
+      names(svm_grid) <- c("gamma", "cost", "kernel", "degree")
+    } else{
+      degree <- 1
+      # tuning parameter grid
+      svm_grid <- expand.grid(gamma, cost, kernel, degree)
+      names(svm_grid) <- c("gamma", "cost", "kernel", "degree")
+    }
+  }
+
+
 
   # prallel tuning if cores > 1
   if( cores > 1 ){
 
     # Train all models in parallel
-    start <- Sys.time()
     grid_cells <- run_svm_mc(
       verbose = verbose,
       svm.grid = svm_grid,
@@ -111,10 +122,9 @@ run_svm <- function(y, L1.x, L2.x, L2.eval.unit, L2.unit, L2.reg,
       y = y,
       L2.unit = L2.unit,
       form = form,
-      kernel = kernel,
       cores = cores)
-    end <- Sys.time()
-    difftime(time1 = end, time2 = start, units = "secs")
+
+  # Train all models sequentially
   } else {
     # loop over tuning grid
     grid_cells <- apply(svm_grid, 1, function(g) {
@@ -122,6 +132,8 @@ run_svm <- function(y, L1.x, L2.x, L2.eval.unit, L2.unit, L2.reg,
       # Set tuning parameters
       gamma_value <- as.numeric(g["gamma"])
       cost_value <- as.numeric(g["cost"])
+      kernel_value <- as.character(g[["kernel"]])
+      degree_value <- as.numeric(g["degree"])
 
       # Loop over each fold
       k_errors <- lapply(seq_along(data), function(k) {
@@ -136,11 +148,12 @@ run_svm <- function(y, L1.x, L2.x, L2.eval.unit, L2.unit, L2.reg,
         model_l <- svm_classifier(
           form = form,
           data = data_train,
-          kernel = kernel,
+          kernel = kernel_value,
           type = "C-classification",
           probability = TRUE,
           svm.gamma = gamma_value,
           svm.cost = cost_value,
+          svm.degree = degree_value,
           verbose = verbose
         )
 
@@ -220,7 +233,7 @@ run_svm <- function(y, L1.x, L2.x, L2.eval.unit, L2.unit, L2.reg,
 #' }
 
 run_svm_mc <- function(y, L2.eval.unit, L2.unit, form, loss.unit,
-                       loss.fun, data, cores, kernel, svm.grid, verbose){
+                       loss.fun, data, cores, svm.grid, verbose){
 
   # Binding for global variables
   g <- NULL
@@ -235,6 +248,8 @@ run_svm_mc <- function(y, L2.eval.unit, L2.unit, form, loss.unit,
     # Set tuning parameters
     gamma_value <- as.numeric(svm.grid[g, "gamma"])
     cost_value <- as.numeric(svm.grid[g, "cost"])
+    kernel_value <- svm.grid[g, "kernel"]
+    degree_value <- as.numeric(svm.grid[g, "degree"])
 
     # Loop over each fold
     k_errors <- lapply(seq_along(data), function(k) {
@@ -249,11 +264,12 @@ run_svm_mc <- function(y, L2.eval.unit, L2.unit, form, loss.unit,
       model_l <- svm_classifier(
         form = form,
         data = data_train,
-        kernel = kernel,
+        kernel = kernel_value,
         type = "C-classification",
         probability = TRUE,
         svm.gamma = gamma_value,
         svm.cost = cost_value,
+        svm.degree = degree_value,
         verbose = verbose
       )
 
