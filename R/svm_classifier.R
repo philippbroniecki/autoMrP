@@ -46,39 +46,22 @@
 #' }
 
 svm_classifier <- function(form, data, kernel, type, probability, svm.gamma,
-                           svm.cost, svm.degree,  verbose = c(TRUE, FALSE)) {
+                           svm.cost, verbose = c(TRUE, FALSE)) {
 
-  if ( kernel == "polynomial" ){
-    # Train and evaluate model using the supplied set of tuning parameters
-    if (isTRUE(verbose == TRUE)) {
-      out <- e1071::svm(
-        formula = form,
-        data = data,
-        type = type,
-        kernel = kernel,
-        gamma = svm.gamma,
-        cost = svm.cost,
-        degree = svm.degree,
-        probability = probability
-      )
-    } else {
-      out <- suppressMessages(suppressWarnings(
-        e1071::svm(
-          formula = form,
-          data = data,
-          type = type,
-          kernel = kernel,
-          gamma = svm.gamma,
-          cost = svm.cost,
-          degree = svm.degree,
-          probability = probability
-        )
-      ))
-    }
-  } else{
-    # Train and evaluate model using the supplied set of tuning parameters
-    if (isTRUE(verbose == TRUE)) {
-      out <- e1071::svm(
+  # Train and evaluate model using the supplied set of tuning parameters
+  if (isTRUE(verbose == TRUE)) {
+    out <- e1071::svm(
+      formula = form,
+      data = data,
+      type = type,
+      kernel = kernel,
+      gamma = svm.gamma,
+      cost = svm.cost,
+      probability = probability
+    )
+  } else {
+    out <- suppressMessages(suppressWarnings(
+      e1071::svm(
         formula = form,
         data = data,
         type = type,
@@ -87,19 +70,7 @@ svm_classifier <- function(form, data, kernel, type, probability, svm.gamma,
         cost = svm.cost,
         probability = probability
       )
-    } else {
-      out <- suppressMessages(suppressWarnings(
-        e1071::svm(
-          formula = form,
-          data = data,
-          type = type,
-          kernel = kernel,
-          gamma = svm.gamma,
-          cost = svm.cost,
-          probability = probability
-        )
-      ))
-    }
+    ))
   }
 
   # Function output

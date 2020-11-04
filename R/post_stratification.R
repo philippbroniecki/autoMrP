@@ -288,7 +288,7 @@ post_stratification <- function(y, L1.x, L2.x, L2.unit, L2.reg,
     svm_opt_ebma <- svm_classifier(
       form = form_svm,
       data = svm_data,
-      kernel = kernel,
+      kernel = svm.opt$kernel,
       type = "C-classification",
       probability = TRUE,
       svm.gamma = svm.opt$gamma,

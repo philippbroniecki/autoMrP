@@ -74,7 +74,7 @@
 
 run_svm <- function(y, L1.x, L2.x, L2.eval.unit, L2.unit, L2.reg,
                     kernel = "radial", loss.fun, loss.unit, gamma,
-                    cost, degree, data, verbose, cores) {
+                    cost, data, verbose, cores) {
 
   # Create model formula
   x <- paste(c(L1.x, L2.x, L2.unit, L2.reg), collapse = " + ")
@@ -91,22 +91,9 @@ run_svm <- function(y, L1.x, L2.x, L2.eval.unit, L2.unit, L2.reg,
     cost <- log_spaced(min = 0.5, max = 10, n = 5)
   }
 
-  # Default degree values
-  if ( is.null(degree) ){
-    if ( "polynomial" %in% kernel ){
-      degree <- c(2, 3, 4)
-      # tuning parameter grid
-      svm_grid <- expand.grid(gamma, cost, kernel, degree)
-      names(svm_grid) <- c("gamma", "cost", "kernel", "degree")
-    } else{
-      degree <- 1
-      # tuning parameter grid
-      svm_grid <- expand.grid(gamma, cost, kernel, degree)
-      names(svm_grid) <- c("gamma", "cost", "kernel", "degree")
-    }
-  }
-
-
+  # tuning parameter grid
+  svm_grid <- expand.grid(gamma, cost, kernel)
+  names(svm_grid) <- c("gamma", "cost", "kernel")
 
   # prallel tuning if cores > 1
   if( cores > 1 ){
@@ -133,7 +120,6 @@ run_svm <- function(y, L1.x, L2.x, L2.eval.unit, L2.unit, L2.reg,
       gamma_value <- as.numeric(g["gamma"])
       cost_value <- as.numeric(g["cost"])
       kernel_value <- as.character(g[["kernel"]])
-      degree_value <- as.numeric(g["degree"])
 
       # Loop over each fold
       k_errors <- lapply(seq_along(data), function(k) {
@@ -153,7 +139,6 @@ run_svm <- function(y, L1.x, L2.x, L2.eval.unit, L2.unit, L2.reg,
           probability = TRUE,
           svm.gamma = gamma_value,
           svm.cost = cost_value,
-          svm.degree = degree_value,
           verbose = verbose
         )
 
@@ -178,7 +163,8 @@ run_svm <- function(y, L1.x, L2.x, L2.eval.unit, L2.unit, L2.reg,
         dplyr::group_by(measure) %>%
         dplyr::summarise(value = mean(value), .groups = "drop") %>%
         dplyr::mutate(gamma = gamma_value,
-                      cost = cost_value)
+                      cost = cost_value,
+                      kernel = kernel_value)
 
     })
   }
@@ -188,7 +174,8 @@ run_svm <- function(y, L1.x, L2.x, L2.eval.unit, L2.unit, L2.reg,
   best_params <- dplyr::slice(loss_score_ranking(score = grid_cells, loss.fun = loss.fun), 1)
 
   out <- list(gamma =  dplyr::pull(.data = best_params, var = gamma),
-              cost = dplyr::pull(.data = best_params, var = cost))
+              cost = dplyr::pull(.data = best_params, var = cost),
+              kernel = dplyr::pull(.data = best_params, var = kernel))
 
   # Function output
   return(out)
@@ -249,7 +236,6 @@ run_svm_mc <- function(y, L2.eval.unit, L2.unit, form, loss.unit,
     gamma_value <- as.numeric(svm.grid[g, "gamma"])
     cost_value <- as.numeric(svm.grid[g, "cost"])
     kernel_value <- svm.grid[g, "kernel"]
-    degree_value <- as.numeric(svm.grid[g, "degree"])
 
     # Loop over each fold
     k_errors <- lapply(seq_along(data), function(k) {
@@ -269,7 +255,6 @@ run_svm_mc <- function(y, L2.eval.unit, L2.unit, form, loss.unit,
         probability = TRUE,
         svm.gamma = gamma_value,
         svm.cost = cost_value,
-        svm.degree = degree_value,
         verbose = verbose
       )
 
@@ -294,7 +279,8 @@ run_svm_mc <- function(y, L2.eval.unit, L2.unit, form, loss.unit,
       dplyr::group_by(measure) %>%
       dplyr::summarise(value = mean(value), .groups = "drop") %>%
       dplyr::mutate(gamma = gamma_value,
-                    cost = cost_value)
+                    cost = cost_value,
+                    kernel = kernel_value)
   }
 
   # De-register cluster

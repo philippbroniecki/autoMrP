@@ -287,7 +287,6 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE, p
                      svm.kernel = c("radial", "polynomial"),
                      svm.gamma = NULL,
                      svm.cost = NULL,
-                     svm.degree = NULL,
                      ebma.n.draws = 100,
                      ebma.tol = c(0.01, 0.005, 0.001, 0.0005, 0.0001, 0.00005, 0.00001),
                      ranef.test = TRUE,
@@ -650,7 +649,6 @@ auto_MrP <- function(y, L1.x, L2.x, L2.unit, L2.reg = NULL, L2.x.scale = TRUE, p
         loss.unit = loss.unit,
         gamma = svm.gamma,
         cost = svm.cost,
-        degree = svm.degree,
         data = cv_folds,
         verbose = verbose,
         cores = cores)
